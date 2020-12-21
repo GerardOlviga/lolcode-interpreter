@@ -255,7 +255,7 @@ public class LexicalAnalyzer {
 			else if(word.matches("^GIMMEH$")) this.tokenStream.add(new Lexeme(word,TokenType.USER_INPUT,Abstraction.STATEMENT_STARTER,lineNo));
 			//Variables
 			else if(word.matches("^ITZ$")) this.tokenStream.add(new Lexeme(word,TokenType.VAR_INITIALIZE,Abstraction.KEYWORD,lineNo));
-			else if(word.matches("^IT$")) this.tokenStream.add(new Lexeme(word,TokenType.VAR_IMPLICIT,Abstraction.KEYWORD,lineNo));
+			else if(word.matches("^IT$")) this.tokenStream.add(new Lexeme(word,TokenType.VAR_IMPLICIT,Abstraction.VARIABLE,lineNo));
 			else if(word.matches("^R$")) this.tokenStream.add(new Lexeme(word,TokenType.ASSIGNMENT,Abstraction.KEYWORD,lineNo));
 			//Data Types
 			else if(word.matches("^NOOB$")) this.tokenStream.add(new Lexeme(word,TokenType.DATATYPE_NONE,Abstraction.DATATYPE,lineNo));
@@ -268,7 +268,7 @@ public class LexicalAnalyzer {
 			else if(word.matches("^NOT$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_NOT,Abstraction.LOGIC_OPERATOR,lineNo));
 			else if(word.matches("^MKAY$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_END,Abstraction.LOGIC_OPERATOR,lineNo));
 			else if(word.matches("^SMOOSH$")) this.tokenStream.add(new Lexeme(word,TokenType.STR_CONCAT,Abstraction.KEYWORD,lineNo));
-			else if(word.matches("^DIFFRINT$")) this.tokenStream.add(new Lexeme(word,TokenType.COMP_NOT_EQUAL,Abstraction.LOGIC_OPERATOR,lineNo));
+			else if(word.matches("^DIFFRINT$")) this.tokenStream.add(new Lexeme(word,TokenType.COMP_NOT_EQUAL,Abstraction.COMPARISON_OPERATOR,lineNo));
 			//Control Flow
 			else if(word.matches("^MEBBE$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_ELSE,Abstraction.JUMP,lineNo));
 			else if(word.matches("^WTF\\?$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_SWITCH,Abstraction.JUMP,lineNo));

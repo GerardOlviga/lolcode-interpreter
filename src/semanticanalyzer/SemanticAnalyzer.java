@@ -1,12 +1,17 @@
 package semanticanalyzer;
 
+import java.util.Scanner;
+
 import lexicalanalyzer.Lexeme;
 import lexicalanalyzer.TokenType;
+import parser.Abstraction;
 import parser.Parser;
 import symboltable.Symbol;
 import symboltable.SymbolTable;
 
 public final class SemanticAnalyzer {
+
+	private static Scanner sc;
 
 	//parser is given to this class in order for the semantic analyzer to know the current situation in the parser.
 	//since there are methods that span multiple lexemes and be able to move the token stream.
@@ -26,7 +31,7 @@ public final class SemanticAnalyzer {
 			if(lexeme.isOperationSymbol()){
 				assignedSymbol = parser.analyzeExpression(st);
 			//symbol  from literal / variable
-			}else if(lexeme.isLiteral() || lexeme.getClassifier() == TokenType.VAR_IDENTIFIER){
+			}else if(lexeme.isLiteral() || lexeme.isVariable()){
 				assignedSymbol = getSymbolFromLiteralOrVariable(lexeme,st);
 			}
 
@@ -43,7 +48,7 @@ public final class SemanticAnalyzer {
 	public static Symbol<Object> getSymbolFromLiteralOrVariable(Lexeme lexeme, SymbolTable st) {
 
 		//as variable.
-		if(lexeme.getClassifier() == TokenType.VAR_IDENTIFIER){
+		if(lexeme.isVariable()){
 			return SemanticAnalyzer.getSymbolFromSymbolTable(lexeme.getValue(),st,lexeme.getLineNo());
 		}
 
@@ -68,7 +73,7 @@ public final class SemanticAnalyzer {
 		// as String
 		}else if(lexeme.getClassifier() == TokenType.STR_LITERAL){
 			String strValue = SemanticAnalyzer.removeStrDelimiters(lexeme.getValue());
-			return new Symbol<Object>(strValue,TokenType.DATATYPE_STRING);
+			return getSymbolFromString(strValue);
 		}else{
 			Parser.printErrorMsg(lexeme.getLineNo(),"expecting a value for declared variable.");
 			return null;
@@ -118,7 +123,7 @@ public final class SemanticAnalyzer {
 		}else if(lexeme.getClassifier() == TokenType.BOOL_FALSE){
 			return "false";
 		//print the value of the variable.
-		}else if(lexeme.getClassifier() == TokenType.VAR_IDENTIFIER){
+		}else if(lexeme.isVariable()){
 			Symbol<Object>  assignedSymbol = SemanticAnalyzer.getSymbolFromSymbolTable(lexeme.getValue(),st,lexeme.getLineNo());
 			if(assignedSymbol != null){
 				return assignedSymbol.getValue().toString();
@@ -127,6 +132,8 @@ public final class SemanticAnalyzer {
 			}
 		//print the value of the expression
 		}else if(lexeme.isOperationSymbol()){
+
+			//move lexeme to next one
 			Symbol<Object>  resultSymbol = parser.analyzeExpression(st);
 			if(resultSymbol != null){
 				return resultSymbol.getValue().toString();
@@ -299,5 +306,41 @@ public final class SemanticAnalyzer {
 		}
 
 	}
+
+	//get user input
+	public static boolean getUserInput(String varName, Lexeme lexeme, SymbolTable st) {
+
+		//get input string
+		sc = new Scanner(System.in);
+		String inputString = sc.next();
+
+		//get input datatype
+		Symbol<Object>userInput = getSymbolFromString(inputString);
+
+		//put
+		if(userInput != null){
+			st.add(varName,userInput);
+			return true;
+		}else{
+			Parser.printErrorMsg(lexeme.getLineNo(),"Input Error.");
+			return false;
+		}
+	}
+
+	//check patterns on the string value and determine whether they can be automatically typecasted into int or double
+	private static Symbol<Object> getSymbolFromString(String strValue) {
+
+		//strValue is an int
+		if(strValue.matches("^-?\\d+$")){
+			return new Symbol<Object> (Integer.parseInt(strValue),TokenType.DATATYPE_INT);
+		}
+		//strValue is a double
+		else if(strValue.matches("^-?\\d*\\.\\d+$")){
+			return new Symbol<Object> (Double.parseDouble(strValue),TokenType.DATATYPE_FLOAT);
+		}
+		//if does not fit any int or double it is transformed into string.
+		return new Symbol<Object> (strValue,TokenType.DATATYPE_STRING);
+	}
+
 
 }

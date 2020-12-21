@@ -42,6 +42,9 @@ public class Lexeme {
 			//special case for Assignment statement
 			}else if(this.classifier == TokenType.VAR_IDENTIFIER && next.classifier == TokenType.ASSIGNMENT){
 				return true;
+			//special case for expression statement
+			}else if(this.isOperationSymbol()){
+				return true;
 			}
 			return false;
 		}
@@ -57,6 +60,17 @@ public class Lexeme {
 			return false;
 
 		}
+
+		//checks if lexeme is a variable or not
+		public boolean isVariable(){
+
+			if(this.abstraction == Abstraction.VARIABLE){
+				return true;
+			}
+			return false;
+
+		}
+
 
 		//checks if lexeme is an operation symbol
 		public boolean isOperationSymbol(){

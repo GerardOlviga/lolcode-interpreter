@@ -9,6 +9,7 @@ import lexicalanalyzer.TokenType;
 import semanticanalyzer.SemanticAnalyzer;
 import symboltable.Symbol;
 import symboltable.SymbolTable;
+import user.Main;
 
 /*
  Parser
@@ -32,6 +33,8 @@ public class Parser {
 
 	private SymbolTable global;					//symbol table that holds global variables.
 
+	//DEBUG MODE
+	private boolean debugMode;
 
 	public Parser(ArrayList<Lexeme> tokenStream) {
 
@@ -41,6 +44,9 @@ public class Parser {
 		//create symbol table
 		this.global = new SymbolTable();
 
+		//global symbol table always have the implicit variable
+		SemanticAnalyzer.declareUnitializedVariable("IT", this.global);
+
 
 		//assume that a blank file is valid.
 		this.valid= true;
@@ -48,6 +54,8 @@ public class Parser {
 		//start iteration
 		this.iter = this.tokenStream.iterator();
 
+		//DEBUG:
+		this.debugMode = Main.debugMode;
 
 		this.current = null;
 		this.next = null;
@@ -58,16 +66,19 @@ public class Parser {
 		//start syntax analysis of the program.
 		this.valid = analyzeProgram();
 
-		//debug
-		System.out.println("\n Final Global Symbol Table");
-		global.print();
+		if(debugMode){
+			//debug
+			System.out.println("\n Final Global Symbol Table");
+			global.print();
 
-		System.out.print("The program is ");
-		if(this.valid){
-			System.out.print("valid");
-		}else{
-			System.out.print("not valid");
+			System.out.print("The program is ");
+			if(this.valid){
+				System.out.print("valid");
+			}else{
+				System.out.print("not valid");
+			}
 		}
+
 
 	}
 	//determine if the program is valid
@@ -95,7 +106,7 @@ public class Parser {
 
 				//Determine if statement is called
 				//Print
-				System.out.println("PROGRAM: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+				printTokenStreamTrace("PROGRAM");
 
 				//skip HAI
 				if(this.current.getClassifier() == TokenType.PROGRAM_START){
@@ -138,8 +149,8 @@ public class Parser {
 
 	//<statement> ::= <vardeclare> | <varassign> | <expr> |<ifthen> | <switch> | <print> | <scan>|<concat>
 	private void analyzeStatement(SymbolTable st) {
-		//the next becomes current
-		System.out.println("STATEMENT: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+
+		printTokenStreamTrace("STATEMENT");
 
 		//--Statement is Print Statement
 		if(this.current.getClassifier() == TokenType.PRINT){
@@ -152,13 +163,22 @@ public class Parser {
 		}
 
 		//--Statement is Assignment
-		else if(this.current.getClassifier() == TokenType.VAR_IDENTIFIER && this.current.getClassifier() == TokenType.VAR_IDENTIFIER){
+		else if(this.current.isVariable() && this.next.getClassifier() == TokenType.ASSIGNMENT){
 			analyzeVarAssign(st);
 		}
 
+		//--Statement is an input statement
+		else if(this.current.getClassifier() == TokenType.USER_INPUT){
+			analyzeInput(st);
+		}
+
+		//statement is an implicit variable expression.
+		else if(this.current.isOperationSymbol()){
+			analyzeImplicitAssignment(st);
+		}
 		//unknown statement starter
 		else{
-			printErrorMsg(this.current.getLineNo(),"variable '" + this.current.getValue() + "' not found");
+			printErrorMsg(this.current.getLineNo(),"action '" + this.current.getValue() + "' not found");
 			this.valid = false;
 		}
 		//check if program is still valid.
@@ -167,7 +187,7 @@ public class Parser {
 			//after declaration move to next state
 			if(iter.hasNext()){
 				this.next = this.iter.next();
-				System.out.println("AFTER-STATEMENT: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+				printTokenStreamTrace("NEXT-STATEMENT");
 				if(this.current.isStatementStarter(this.next)){
 					analyzeStatement(st);
 				}
@@ -176,42 +196,85 @@ public class Parser {
 
 
 	}
+
+	//<imp_assign> ::= <expression>
+	private void analyzeImplicitAssignment(SymbolTable st) {
+		printTokenStreamTrace("ExpressionImplicit");
+
+		//semantically analyze variable declaration
+		this.valid = SemanticAnalyzer.assignVariable("IT",this.current,st,this);
+	}
+
+	//<input> ::= GIMME varident
+	private void analyzeInput(SymbolTable st) {
+		try{
+			printTokenStreamTrace("USER INPUT");
+
+			//move one lexeme
+			this.current = this.next;
+			this.next = this.iter.next();
+
+			printTokenStreamTrace("VAR INPUT");
+			if(this.current.isVariable()){
+
+				//define the variable name
+				String varName = this.current.getValue();
+
+				//semantically analyze getting user input
+				if(SemanticAnalyzer.variableInSymbolTable(varName, st)){
+					this.valid = SemanticAnalyzer.getUserInput(varName,this.current,st);
+				}else{
+					//declare error
+					printErrorMsg(this.next.getLineNo(),"Variable '" +varName +"' undeclared.");
+					this.valid = false;
+				}
+
+			}else{
+				printErrorMsg(this.current.getLineNo(),"expecting a value for declared variable.");
+				this.valid = false;
+			}
+
+
+		}catch(NoSuchElementException e){
+			printErrorMsg(this.current.getLineNo(),"user input ends abruptly.");
+			this.valid = false;
+		}
+
+	}
+
 	/*
 	 <var_assign> ::= varident R <value>
 	 <value> ::= varident |  <expr> |  <literal>
-	 */
+	*/
 
 	private void analyzeVarAssign(SymbolTable st) {
 		try{
 
 			if (this.lexemesAreInSameLine()){
-				System.out.println("ASSIGNMENT: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+				printTokenStreamTrace("ASSIGNMENT");
 
 				//get Variable Name
 				String varName = this.current.getValue();
 
 				//move lexemes
-				this.current = this.next;
-				this.next = this.iter.next();
-				System.out.println("VAR ASSIGN: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+				this.moveToNextLexeme();
+				printTokenStreamTrace("VAR_ASSIGN");
+
 				//check if next is literal variable or expression ,and next and current are on different lines
-				if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER) && this.lexemesAreInSameLine()){
+				if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.isVariable()) && this.lexemesAreInSameLine()){
 
-					System.out.println("VAR ASSIGN: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
-
-
+					this.moveToNextLexeme();
+					printTokenStreamTrace("VAR_ASSIGN");
 
 					//semantically analyze variable assignment
 					if(SemanticAnalyzer.variableInSymbolTable(varName, st)){
-						this.valid = SemanticAnalyzer.assignVariable(varName,this.next,st,this);
+						this.valid = SemanticAnalyzer.assignVariable(varName,this.current,st,this);
 					}else{
 						//declare error
-						printErrorMsg(this.next.getLineNo(),"Variable '" +varName +"' undeclared.");
+						printErrorMsg(this.current.getLineNo(),"Variable '" +varName +"' undeclared.");
 						this.valid = false;
 					}
-					//move to next lexeme after this.
-					this.current = this.next;
-					this.next = this.iter.next();
+
 
 				}else{
 					printErrorMsg(this.current.getLineNo(),"expecting a value for declared variable.");
@@ -236,44 +299,38 @@ public class Parser {
 	private void analyzeVarDeclare(SymbolTable st){
 	try{
 			//check if next is variable identifier and if next and current are on same line
-		if ( this.next.getClassifier() == TokenType.VAR_IDENTIFIER && this.lexemesAreInSameLine()){
-			System.out.println("VAR DECLARE: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		if ( this.next.isVariable() && this.lexemesAreInSameLine()){
+			printTokenStreamTrace("VAR_DECLARE");
 			//VarDeclare is valid
 
 			//point current to the next lexeme
-			this.current = this.next;
+			this.moveToNextLexeme();
 
 			//get Variable Name
 			String varName = this.current.getValue();
 
-			//point next to the next iteration
-			this.next = this.iter.next();
 			//check if next is variable initialization keyword and if next and current are on same line
 			if (this.next.getClassifier() == TokenType.VAR_INITIALIZE && this.lexemesAreInSameLine()){
-				System.out.println("VAR INITIALIZE: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+				printTokenStreamTrace("VAR_INITIALIZE");
 
 				//point current to the next lexeme
 				this.current = this.next;
-
-				//point next to the next iteration
 				this.next = this.iter.next();
-				System.out.println("VAR ASSIGN: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+
+				printTokenStreamTrace("VAR_ASSIGN");
 
 				//check if next is literal variable or expression ,and next and current are on different lines
-				if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER) && this.lexemesAreInSameLine()){
+				if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.isVariable()) && this.lexemesAreInSameLine()){
 
-					System.out.println("VAR ASSIGN: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+					//move to next lexeme after this.
+					this.moveToNextLexeme();
+
+					printTokenStreamTrace("VAR_ASSIGN");
 
 
 
 					//semantically analyze variable declaration
-					this.valid = SemanticAnalyzer.assignVariable(varName,this.next,st,this);
-
-
-
-					//move to next lexeme after this.
-					this.current = this.next;
-					this.next = this.iter.next();
+					this.valid = SemanticAnalyzer.assignVariable(varName,this.current,st,this);
 
 				}else{
 					printErrorMsg(this.current.getLineNo(),"expecting a value for declared variable.");
@@ -306,24 +363,30 @@ public class Parser {
 	 <value> ::= varident |  <expr> |  <literal>
 	 */
 	private void analyzePrint(SymbolTable st) {
-		System.out.println("PRINT: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		//TODO: Make Sure that only current lexeme is passed to semantic Analysis. next only serves as lookahead
+		printTokenStreamTrace("PRINT");
 		//check if next is literal or variable and if next and current are on different lines
-		if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER) && this.lexemesAreInSameLine()){
+		if ((this.next.isLiteral() || this.next.isOperationSymbol() || this.next.isVariable()) && this.lexemesAreInSameLine()){
 
 			//Print is valid
+			printTokenStreamTrace("PRINT_START");
+
+			moveToNextLexeme();
+
 
 			String printValues = "";
 			//repeat until current is a non identifier
-			while (iter.hasNext() && (this.next.isLiteral() || this.next.isOperationSymbol() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER)){
+			while (this.current.isLiteral() || this.current.isOperationSymbol() || this.current.isVariable()){
 
-				System.out.println("PRINTVALUE: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
 
-				//special case identifier to not include var identifier from possible assignment
-				if(this.next.getClassifier() == TokenType.VAR_IDENTIFIER && !(lexemesAreInSameLine())){
-					break;
-				}
+
+				printTokenStreamTrace("PRINT_VALUE");
+
+
 				//get Values to print
-				String currentValue = SemanticAnalyzer.getPrintString(this.next,st,this);
+				String currentValue = SemanticAnalyzer.getPrintString(this.current,st,this);
+				printTokenStreamTrace("PAFTER CURRVALUE");
+
 				if(currentValue != null){
 					printValues = printValues + currentValue;
 				}else{
@@ -331,14 +394,19 @@ public class Parser {
 					break;
 				}
 
+				printTokenStreamTrace("AFTER ADD VALUE");
+				//only move to next lexeme if lexemes are on the same line or lexemes are a valid print value
+				if(this.lexemesAreInSameLine() && (this.next.isLiteral() || this.next.isOperationSymbol() || this.next.isVariable())){
+					moveToNextLexeme();
+				}else{
+					break;
+				}
 
-				//go to next lexeme
-				this.current = this.next;
-				this.next = this.iter.next();
 
 			}
 			//print values
 			if(this.valid){
+				printTokenStreamTrace("PRINT_END");
 				System.out.println(printValues);
 			}
 
@@ -354,48 +422,58 @@ public class Parser {
 
 	/*
 	<expression> ::= <arith_operation> | <comp_operation> | <logic_operation>
-	<arith_operation> ::=  <arith_operator> <operand> AN <operand>
-	<operand> ::=  <arith_operation> | <literal> | <variable>
-	<arith_operator> ::= SUM OF | DIFF OF ..
+
 
 	*/
 	public Symbol<Object> analyzeExpression(SymbolTable st) {
 
-		//move to next lexeme
-		this.current = this.next;
-		this.next = this.iter.next();
+	Symbol<Object> resultSymbol = null;
 
-		System.out.println("EXPRESSION: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		printTokenStreamTrace("EXPRESSION");
 
 		//arithmetic expression
 		if(this.current.isArithmeticOperator()){
-			return getArithmeticAnswer(st);
+			resultSymbol = getArithmeticAnswer(st);
 		}
 
-		printErrorMsg(this.current.getLineNo()," '" + this.current.getValue() + "' not an expression operator");
+		//check for result symbol results
+		if(resultSymbol != null){
+
+			//move to next lexeme
+			//this.current = this.next;
+			//this.next = this.iter.next();
+
+			return resultSymbol;
+		}
+
+		//printErrorMsg(this.current.getLineNo()," '" + this.current.getValue() + "' not an expression operator");
 		return null;
 	}
+	/*
+	<arith_operation> ::=  <arith_operator> <operand> AN <operand>
+	<operand> ::=  <arith_operation> | <literal> | <variable>
+	<arith_operator> ::= SUM OF | DIFF OF ..
+	*/
 	//get Answer from arithmetic
 	private Symbol<Object> getArithmeticAnswer(SymbolTable st) {
-		System.out.println("ARITH EXPRESSION: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		printTokenStreamTrace("ARITH EXPRESSION");
 
 
 		TokenType operator = this.current.getClassifier();
 		Symbol<Object> operand1 = null;
 		Symbol<Object> operand2 = null;
 
-		System.out.println("ARITH OP1: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		this.moveToNextLexeme();
+		printTokenStreamTrace("ARITH OP1");
 		//if op1 is an expression
-		if(this.next.isArithmeticOperator()){
+		if(this.current.isArithmeticOperator()){
 			//move to next lexeme
-			this.current = this.next;
-			this.next = this.iter.next();
 			operand1 = getArithmeticAnswer(st);
 		//if op1 is a integer or variable
-		}else if(this.next.isLiteral() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER){
-			operand1 = SemanticAnalyzer.getSymbolFromLiteralOrVariable(this.next, st);
+		}else if(this.current.isLiteral() || this.current.isVariable()){
+			operand1 = SemanticAnalyzer.getSymbolFromLiteralOrVariable(this.current, st);
 		}else{
-			printErrorMsg(this.next.getLineNo(),"'" + this.next.getValue() + "' is not a valid operand.");
+			printErrorMsg(this.current.getLineNo(),"'" + this.current.getValue() + "' is not a valid operand.");
 			return null;
 		}
 		//if operand 1 == null
@@ -404,32 +482,26 @@ public class Parser {
 		}
 
 		//move to next lexeme
-		this.current = this.next;
-		this.next = this.iter.next();
-
-		System.out.println("ARITH SEP: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		this.moveToNextLexeme();
+		printTokenStreamTrace("ARITH SEP");
 
 		// if next value is not AN
-		if(this.next.getClassifier() != TokenType.EXPR_OP_SEPARATOR){
-			printErrorMsg(this.next.getLineNo(),"separator AN not found.");
+		if(this.current.getClassifier() != TokenType.EXPR_OP_SEPARATOR){
+			printErrorMsg(this.current.getLineNo(),"separator AN not found.");
 			return null;
 		}
 		//move to next lexeme
-		this.current = this.next;
-		this.next = this.iter.next();
+		this.moveToNextLexeme();
 		// if next
-		System.out.println("ARITH OP2: Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+		printTokenStreamTrace("ARITH OP2");
 		//if op2 is an expression
-		if(this.next.isArithmeticOperator()){
-			//move to next lexeme
-			this.current = this.next;
-			this.next = this.iter.next();
+		if(this.current.isArithmeticOperator()){
 			operand2 = getArithmeticAnswer(st);
 		//if op2 is a integer or variable
-		}else if(this.next.isLiteral() || this.next.getClassifier() == TokenType.VAR_IDENTIFIER){
-			operand2 = SemanticAnalyzer.getSymbolFromLiteralOrVariable(this.next, st);
+		}else if(this.current.isLiteral() || this.current.isVariable()){
+			operand2 = SemanticAnalyzer.getSymbolFromLiteralOrVariable(this.current, st);
 		}else{
-			printErrorMsg(this.next.getLineNo(),"'" + this.next.getValue() + "' is not a valid operand.");
+			printErrorMsg(this.current.getLineNo(),"'" + this.current.getValue() + "' is not a valid operand.");
 			return null;
 		}
 
@@ -438,8 +510,10 @@ public class Parser {
 			return null;
 		}
 
+		printTokenStreamTrace("ARITH EXPRESSION END");
+
 		//perform operation
-		return	SemanticAnalyzer.performArithmeticOperation(operator,operand1,operand2,this.next.getLineNo());
+		return	SemanticAnalyzer.performArithmeticOperation(operator,operand1,operand2,this.current.getLineNo());
 	}
 
 
@@ -455,6 +529,21 @@ public class Parser {
 		System.out.println("Error at Line " + lineNo + " : " + msg);
 
 	}
+
+	//move to next lexeme
+	public void moveToNextLexeme(){
+		if(this.iter.hasNext()){
+			this.current = this.next;
+			this.next = this.iter.next();
+		}
+	}
+
+	//debug
+	private void printTokenStreamTrace(String label){
+			if(debugMode){
+				System.out.println( label +": Current: "+ this.current.getValue() + " Next: " + this.next.getValue());
+			}
+		}
 
 
 
