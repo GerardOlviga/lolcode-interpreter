@@ -9,12 +9,13 @@ import lexicalanalyzer.LexicalAnalyzer;
 import parser.Parser;
 
 public class Main {
-
+	//TODO: Handle Errors
+	//TODO Plan method for implementation of control flow statements.
 
 	public static String DATASET = "user/input.lol";
 	public static String OUTPUT = "src/user/output.txt";
 	//DEBUG: check if debug is on or not
-	public static boolean debugMode = true;
+	public static boolean debugMode = false;
 
 
 	public static void main(String[] args) {
@@ -30,7 +31,7 @@ public class Main {
 		 ArrayList<Lexeme> tokenStream = la.createTokenStream(inputFile);
 
 		 if(debugMode){
-			 System.out.println("  Lexical Analyzer");
+			 System.out.println("Lexical Analyzer");
 			 la.print();
 		 }
 

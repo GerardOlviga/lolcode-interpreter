@@ -89,6 +89,9 @@ public class LexicalAnalyzer {
                		}
 				lineNo++;
                 }
+			//add an eof lexeme that will signify the end of the file
+			this.tokenStream.add(new Lexeme("EOF",TokenType.END_OF_FILE, Abstraction.KEYWORD,lineNo));
+
 	      } catch (Exception e) {
 	        System.out.println("An error occurred.");
 	      }
@@ -265,12 +268,12 @@ public class LexicalAnalyzer {
 			else if(word.matches("^TROOF$")) this.tokenStream.add(new Lexeme(word,TokenType.DATATYPE_BOOLEAN,Abstraction.DATATYPE,lineNo));
 			//Operations
 			else if(word.matches("^AN$")) this.tokenStream.add(new Lexeme(word,TokenType.EXPR_OP_SEPARATOR,Abstraction.KEYWORD,lineNo));
-			else if(word.matches("^NOT$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_NOT,Abstraction.LOGIC_OPERATOR,lineNo));
-			else if(word.matches("^MKAY$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_END,Abstraction.LOGIC_OPERATOR,lineNo));
+			else if(word.matches("^NOT$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_NOT,Abstraction.BOOLEAN_OPERATOR,lineNo));
+			else if(word.matches("^MKAY$")) this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_END,Abstraction.KEYWORD,lineNo));
 			else if(word.matches("^SMOOSH$")) this.tokenStream.add(new Lexeme(word,TokenType.STR_CONCAT,Abstraction.KEYWORD,lineNo));
 			else if(word.matches("^DIFFRINT$")) this.tokenStream.add(new Lexeme(word,TokenType.COMP_NOT_EQUAL,Abstraction.COMPARISON_OPERATOR,lineNo));
 			//Control Flow
-			else if(word.matches("^MEBBE$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_ELSE,Abstraction.JUMP,lineNo));
+			else if(word.matches("^MEBBE$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_ELSEIF,Abstraction.JUMP,lineNo));
 			else if(word.matches("^WTF\\?$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_SWITCH,Abstraction.JUMP,lineNo));
 			else if(word.matches("^OMG$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_CASE,Abstraction.JUMP,lineNo));
 			else if(word.matches("^OMGWTF$")) this.tokenStream.add(new Lexeme(word,TokenType.CTRL_CASE_DEFAULT,Abstraction.JUMP,lineNo));
@@ -295,20 +298,21 @@ public class LexicalAnalyzer {
 			else if(word.matches("^MOD\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.EXPR_MOD,Abstraction.ARITHMETIC_OPERATOR,lineNo));
 			else if(word.matches("^BIGGR\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.EXPR_MAX,Abstraction.ARITHMETIC_OPERATOR,lineNo));
 			else if(word.matches("^SMALLR\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.EXPR_MIN,Abstraction.ARITHMETIC_OPERATOR,lineNo));
-			else if(word.matches("^BOTH\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_AND,Abstraction.LOGIC_OPERATOR,lineNo));
-			else if(word.matches("^EITHER\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_OR,Abstraction.LOGIC_OPERATOR,lineNo));
-			else if(word.matches("^WON\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_XOR,Abstraction.LOGIC_OPERATOR,lineNo));
-			else if(word.matches("^ALL\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_AND,Abstraction.LOGIC_OPERATOR,lineNo));
-			else if(word.matches("^ANY\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_OR,Abstraction.LOGIC_OPERATOR,lineNo));
+			else if(word.matches("^BOTH\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_AND,Abstraction.BOOLEAN_OPERATOR,lineNo));
+			else if(word.matches("^EITHER\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_OR,Abstraction.BOOLEAN_OPERATOR,lineNo));
+			else if(word.matches("^WON\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_XOR,Abstraction.BOOLEAN_OPERATOR,lineNo));
+			else if(word.matches("^ALL\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_AND,Abstraction.BOOL_INF_OPERATOR,lineNo));
+			else if(word.matches("^ANY\\s+OF$"))this.tokenStream.add(new Lexeme(word,TokenType.BOOL_INF_OR,Abstraction.BOOL_INF_OPERATOR,lineNo));
 			else if(word.matches("^BOTH\\s+SAEM$"))this.tokenStream.add(new Lexeme(word,TokenType.COMP_EQUAL,Abstraction.COMPARISON_OPERATOR,lineNo));
 			//Control Flow
-			else if(word.matches("^O\\s+RLY\\?$"))this.tokenStream.add(new Lexeme(word,TokenType.CTRL_IF_THEN,Abstraction.JUMP,lineNo));
+			else if(word.matches("^O\\s+RLY\\?$"))this.tokenStream.add(new Lexeme(word,TokenType.CTRL_IF_THEN,Abstraction.STATEMENT_STARTER,lineNo));
 			else if(word.matches("^YA\\s+RLY$"))this.tokenStream.add(new Lexeme(word,TokenType.CTRL_IF,Abstraction.JUMP,lineNo));
 			else if(word.matches("^NO\\s+WAI$"))this.tokenStream.add(new Lexeme(word,TokenType.CTRL_ELSE,Abstraction.JUMP,lineNo));
 
 			//variable(Starts with a letter)
 			else if(word.matches("^[a-zA-Z_]+[a-zA-Z0-9_]*$")) this.tokenStream.add(new Lexeme(word,TokenType.VAR_IDENTIFIER,Abstraction.VARIABLE,lineNo));
-
+			//unknowns
+			else if(word.matches("^[^\\s]+$"))this.tokenStream.add(new Lexeme(word,TokenType.UNKNOWN_KEYWORD,Abstraction.KEYWORD,lineNo));
 		//on multiline comment mode.
 		}else if(this.currentMode == Mode.MULTI_LINE_COMMENT){
 			//handle comment

@@ -15,5 +15,9 @@ TLDR
 
   VISIBLE x "==" y " is " IT  BTW uses the implicit variable
   VISIBLE x "!=" y " is " DIFFRINT x AN y
+  VISIBLE x ">=" y " is " BOTH SAEM x AN BIGGR OF x AN y
+  VISIBLE x "<=" y " is " BOTH SAEM x AN SMALLR OF x AN y
+  VISIBLE x ">" y " is " DIFFRINT x AN SMALLR OF x AN y
+  VISIBLE x "<" y " is " DIFFRINT x AN AN BIGGR OF x AN y
 
 KTHXBYE

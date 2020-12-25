@@ -76,6 +76,8 @@ public enum TokenType {
 
 	//Unidentified Keyword
 	UNKNOWN_KEYWORD,
-	//Delimiters
+
+	//EOF token that detemines end of file
+	END_OF_FILE
 
 }

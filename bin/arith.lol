@@ -1,4 +1,18 @@
 HAI 1.2
-	I HAS A n ITZ SUM OF "2" AN "3"
+	I HAS A x
+	I HAS A y
+	I HAS A answer
+
+	 VISIBLE "Get x:"
+	 GIMMEH x
+
+	 VISIBLE "Get y:"
+	 GIMMEH y
+
+	SUM OF SUM OF x AN y AN SUM OF x AN y
+
+
+	 answer R SUM OF x AN y
+	 VISIBLE x " + " y " = " answer
 
 KTHXBYE

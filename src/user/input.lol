@@ -1,15 +1,21 @@
 HAI 1.2
-	I HAS A x
-	I HAS A y
-	I HAS A answer
-
-	 VISIBLE "Get x:"
-	 GIMMEH x
-
-	 VISIBLE "Get y:"
-	 GIMMEH y
-
-	 answer R SUM OF SUM OF x AN y AN SUM OF x AN y
-	 VISIBLE x " + " y " = " answer
-
+	I HAS A  x ITZ 12
+	I HAS A  t ITZ 12
+	WIN
+	O RLY?
+	YA RLY
+		x R 10
+		VISIBLE "x  is: " x
+		WIN
+		O RLY?
+			YA RLY
+			x R 2
+			NO WAI
+			x R 7
+		OIC
+	NO WAI
+		x R 11
+	OIC
+	VISIBLE "x is: " x
 KTHXBYE
+

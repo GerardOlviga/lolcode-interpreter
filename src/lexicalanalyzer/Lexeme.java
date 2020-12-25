@@ -43,7 +43,7 @@ public class Lexeme {
 			}else if(this.classifier == TokenType.VAR_IDENTIFIER && next.classifier == TokenType.ASSIGNMENT){
 				return true;
 			//special case for expression statement
-			}else if(this.isOperationSymbol()){
+			}else if(this.isOperationSymbol() || this.isLiteral() || this.isVariable()){
 				return true;
 			}
 			return false;
@@ -76,7 +76,8 @@ public class Lexeme {
 		public boolean isOperationSymbol(){
 			if(this.abstraction == Abstraction.ARITHMETIC_OPERATOR ||
 				this.abstraction == Abstraction.COMPARISON_OPERATOR ||
-				this.abstraction == Abstraction.LOGIC_OPERATOR){
+				this.abstraction == Abstraction.BOOLEAN_OPERATOR ||
+				this.abstraction == Abstraction.BOOL_INF_OPERATOR){
 				return true;
 			}
 			return false;
@@ -90,6 +91,21 @@ public class Lexeme {
 			return false;
 		}
 
+		//checks if lexeme is a Comparison symbol
+		public boolean isComparisonOperator(){
+			if(this.abstraction == Abstraction.COMPARISON_OPERATOR){
+				return true;
+			}
+			return false;
+		}
+
+		//checks if lexeme is a Boolean symbol
+		public boolean isBooleanOperator(){
+			if(this.abstraction == Abstraction.BOOLEAN_OPERATOR){
+				return true;
+			}
+			return false;
+		}
 
 		//checks if lexeme is an operation delimiter (AN)
 		public boolean isOperationSeparator(){
